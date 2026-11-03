@@ -1,4 +1,5 @@
 convert.afeiii.com {
+    import /etc/caddy/afeiii-indexnow-convert.caddy
   root * /opt/apps/vert/current
   encode zstd gzip
   header {
