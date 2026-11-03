@@ -37,7 +37,7 @@ export async function verifyDeferredImages(browser, base) {
 		});
 		try {
 			for (const path of ["/", "/formats/"]) {
-				await page.goto(base + path, { waitUntil: "networkidle" });
+				await page.goto(base + path, { waitUntil: "domcontentloaded" });
 				expect(
 					requests,
 					"Reading public pages must not fetch ImageMagick",
@@ -47,7 +47,11 @@ export async function verifyDeferredImages(browser, base) {
 					page.locator('meta[name="description"]'),
 				).toHaveCount(1);
 			}
-			await page.goto(base + "/", { waitUntil: "networkidle" });
+			await page.goto(base + "/", { waitUntil: "domcontentloaded" });
+			// A live status change also proves hydration completed before file input.
+			await expect(
+				page.locator(".file-category-card").filter({ hasText: "音频" }),
+			).toContainText(/状态：\s*就绪/, { timeout: 90000 });
 			const png = Buffer.from(
 				await page.evaluate(async () => {
 					const canvas = document.createElement("canvas");

@@ -6,6 +6,7 @@ import { unzipSync } from "fflate";
 import { Input, BufferSource, MATROSKA, ALL_FORMATS } from "mediabunny";
 import { startServer } from "./serve.mjs";
 import { verifyDeferredImages } from "./smoke-deferred-images.mjs";
+import { cloudflareRequestKind } from "./smoke-requests.mjs";
 
 const local = process.env.BASE_URL ? null : await startServer();
 const base = process.env.BASE_URL || local.url;
@@ -30,15 +31,13 @@ const foreign = [],
 	analytics = [],
 	violations = [],
 	pageErrors = [];
+const cloudflareRequests = { analytics: 0, security: 0 };
 context.on("request", (r) => {
 	const u = new URL(r.url());
-	const isAnalytics =
-		u.protocol === "https:" &&
-		((u.hostname === "static.cloudflareinsights.com" &&
-			u.pathname.startsWith("/beacon.min.js")) ||
-			(u.hostname === "cloudflareinsights.com" &&
-				u.pathname === "/cdn-cgi/rum"));
-	if (isAnalytics) {
+	const cloudflareKind = cloudflareRequestKind(r.url(), r.method(), base);
+	if (cloudflareKind) {
+		cloudflareRequests[cloudflareKind]++;
+		// Inspect these payloads for fixture data too; do not hide upload leaks.
 		if (r.method() === "POST") analytics.push(r.postData() || "");
 		return;
 	}
@@ -92,7 +91,8 @@ function wave() {
 	return out;
 }
 async function home() {
-	await page.goto(base + "/", { waitUntil: "networkidle" });
+	// Background engine preloads are not a page-ready signal; assert readiness below.
+	await page.goto(base + "/", { waitUntil: "domcontentloaded" });
 	await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hans");
 	await expect(page.getByRole("heading", { level: 1 })).toContainText(
 		"文件格式转换",
@@ -103,7 +103,7 @@ async function home() {
 	).toHaveCount(6);
 	await expect(
 		page.locator(".file-category-card").filter({ hasText: "音频" }),
-	).toContainText("就绪", { timeout: 90000 });
+	).toContainText(/状态：\s*就绪/, { timeout: 90000 });
 	expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
 }
 async function convert(file, to) {
@@ -470,7 +470,7 @@ try {
 		"/debug/",
 	]) {
 		const response = await page.goto(base + path, {
-			waitUntil: "networkidle",
+			waitUntil: "domcontentloaded",
 		});
 		expect(response.status()).toBe(200);
 		expect(await page.locator("body").innerText()).not.toContain(
@@ -480,7 +480,7 @@ try {
 			...(await page.evaluate(() => window.__cspViolations || [])),
 		);
 	}
-	await page.goto(base + "/settings/", { waitUntil: "networkidle" });
+	await page.goto(base + "/settings/", { waitUntil: "domcontentloaded" });
 	expect(await page.locator("body").innerText()).not.toContain("实例 URL");
 	await home();
 	if (process.env.SCREENSHOT_DIR) {
@@ -524,7 +524,7 @@ try {
 		]) {
 			expect(
 				payload,
-				"Analytics must not contain filenames or document content",
+				"Cloudflare requests must not contain filenames or document content",
 			).not.toContain(marker);
 		}
 	}
@@ -535,6 +535,7 @@ try {
 				results,
 				foreignRequests: foreign.length,
 				fileUploads: writes.length,
+				cloudflareRequests,
 				pageErrors: pageErrors.length,
 				mobileOverflow: false,
 			},
