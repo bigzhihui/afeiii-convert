@@ -1,6 +1,6 @@
 十三月格式转换 is a modified deployment of VERT.
 VERT source and contributors: https://github.com/VERT-sh/VERT
-Site source: https://github.com/bigzhihui/VERT
+Site source: https://github.com/bigzhihui/afeiii-convert
 VERT is licensed under AGPL-3.0; see /LICENSE and the site source.
 
 Conversion software includes ImageMagick/magick-wasm, Pandoc/pandoc-wasm,

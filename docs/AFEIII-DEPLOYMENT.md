@@ -1,7 +1,7 @@
 # 十三月格式转换维护
 
 - 公开地址：<https://convert.afeiii.com>。
-- 本站源码：<https://github.com/bigzhihui/VERT>，生产分支 `brand/thirteen-month`。
+- 本站源码：<https://github.com/bigzhihui/afeiii-convert>，生产分支 `brand/thirteen-month`。
 - 上游：<https://github.com/VERT-sh/VERT>，基线 `f5ecdec90d52fa84d5204fb59bb8da7d31e3704a`。
 - 保留 VERT 及其贡献者署名，沿用 AGPL-3.0。`LICENSE` 和第三方许可在站点可访问。
 
